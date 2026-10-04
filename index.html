@@ -30,31 +30,36 @@
       </div>
     </div>
 
-    <!-- Quick Scenario Buttons (Original Set) -->
-    <div class="scenario-actions">
-      <span class="scenario-label">Simulate Scenarios:</span>
-      <button class="pill-btn active" id="btn-scene-baseline" title="Normal room baseline with stable tracking">
-        <span>🔄 Baseline Scan</span>
-      </button>
-      <button class="pill-btn" id="btn-scene-doorway" title="Box placed in doorway: 62% exit clearance alert">
-        <span class="alert-dot orange"></span>
-        <span>🚪 Doorway Blocked</span>
-      </button>
-      <button class="pill-btn" id="btn-scene-person" title="Anonymous motion volume moving across the room">
-        <span class="alert-dot cyan"></span>
-        <span>🚶 Moving Person</span>
-      </button>
-      <button class="pill-btn" id="btn-scene-chair" title="Table & chair cluster shifted 24cm">
-        <span class="alert-dot pink"></span>
-        <span>🪑 Furniture Shift</span>
-      </button>
+    <!-- Quick Scenario Navigation Tabs with Prev/Next Traversal Controls -->
+    <div class="scenario-actions" role="tablist" aria-label="Scenario Tabs">
+      <button class="tab-traverse-btn" id="btn-prev-tab" title="Previous Tab (Keyboard: Left Arrow)">‹</button>
+      <div class="scenario-tabs-track" id="scenario-tabs-track">
+        <button class="pill-btn active" id="btn-scene-baseline" data-scene="baseline" role="tab" aria-selected="true" title="Normal room baseline with stable tracking (Key: 1)">
+          <span>🔄 Baseline Scan</span>
+        </button>
+        <button class="pill-btn" id="btn-scene-doorway" data-scene="doorway" role="tab" aria-selected="false" title="Box placed in doorway: 62% exit clearance alert (Key: 2)">
+          <span class="alert-dot orange"></span>
+          <span>🚪 Doorway Blocked</span>
+        </button>
+        <button class="pill-btn" id="btn-scene-person" data-scene="person" role="tab" aria-selected="false" title="Anonymous motion volume moving across the room (Key: 3)">
+          <span class="alert-dot cyan"></span>
+          <span>🚶 Moving Person</span>
+        </button>
+        <button class="pill-btn" id="btn-scene-chair" data-scene="chair" role="tab" aria-selected="false" title="Table & chair cluster shifted 24cm (Key: 4)">
+          <span class="alert-dot pink"></span>
+          <span>🪑 Furniture Shift</span>
+        </button>
+      </div>
+      <button class="tab-traverse-btn" id="btn-next-tab" title="Next Tab (Keyboard: Right Arrow)">›</button>
+      <button class="tab-auto-btn" id="btn-auto-tour" title="Auto-traverse through all tabs every 5 seconds">▶ Auto-Tour</button>
     </div>
 
     <!-- View Modes & Help -->
     <div class="nav-tools">
-      <div class="view-toggle-group">
-        <button class="toggle-btn" id="toggle-device-view" title="Mobile iPhone 16 Pro LiDAR frame">📱 Phone Frame</button>
-        <button class="toggle-btn active" id="toggle-station-view" title="Full Control Station with 3D LiDAR & Telemetry">🖥️ Control Station</button>
+      <div class="view-toggle-group" role="tablist" aria-label="View Mode">
+        <button class="toggle-btn" id="toggle-device-view" role="tab" aria-selected="false" title="Mobile iPhone 16 Pro LiDAR frame (Key: V)">📱 Phone Frame</button>
+        <button class="toggle-btn active" id="toggle-station-view" role="tab" aria-selected="true" title="Full Control Station with 6 Cards & Telemetry (Key: V)">🖥️ Control Station</button>
+        <button class="toggle-btn" id="toggle-split-view" role="tab" aria-selected="false" title="Side-by-side Split View (Key: V)">🔀 Split View</button>
       </div>
       <button class="pill-btn outline" id="btn-open-guide" title="Guide for running natively on iOS or Flutter">
         <span>⚙️ Native Run Guide</span>
@@ -66,7 +71,7 @@
   </header>
 
   <!-- Main Container -->
-  <main class="app-layout" id="app-layout">
+  <main class="app-layout station-only" id="app-layout">
 
     <!-- LEFT / MAIN: Exact 1:1 SwiftUI ContentView Layout & Palette -->
     <section class="device-section">

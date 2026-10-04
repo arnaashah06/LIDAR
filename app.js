@@ -679,259 +679,477 @@
     applyComputeBudget();
   });
 
-  // ─── Add-On: Compute Budget Slider & Presets (Kept Constant) ────────────────
-  budgetSlider.addEventListener('input', (e) => {
-    memoryBudgetLimitKB = parseInt(e.target.value, 10);
-    budgetSliderVal.textContent = `${memoryBudgetLimitKB} KB`;
-    budgetModeBadge.textContent = `Target: ${memoryBudgetLimitKB} KB / ${(1.5 + memoryBudgetLimitKB * 0.05).toFixed(1)} ms`;
-    applyComputeBudget();
-  });
-
-  presetButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      presetButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const bgt = parseInt(btn.dataset.budget, 10);
-      memoryBudgetLimitKB = bgt;
-      budgetSlider.value = bgt;
-      budgetSliderVal.textContent = `${bgt} KB`;
-      budgetModeBadge.textContent = `Target: ${bgt} KB / ${(1.5 + bgt * 0.05).toFixed(1)} ms`;
-      playClickSound(820, 'sine', 0.05);
-
-      showToast(`Hardware profile: ${btn.querySelector('.preset-title').textContent}`, '⚙️');
-      appendLog('BUDGET', `Hardware budget governor set to ${bgt} KB limit.`, 'cyan');
+  // ─── Add-On: Compute Budget Slider & Presets (Guarded) ─────────────────────
+  if (budgetSlider) {
+    budgetSlider.addEventListener('input', (e) => {
+      memoryBudgetLimitKB = parseInt(e.target.value, 10);
+      if (budgetSliderVal) budgetSliderVal.textContent = `${memoryBudgetLimitKB} KB`;
+      if (budgetModeBadge) budgetModeBadge.textContent = `Target: ${memoryBudgetLimitKB} KB / ${(1.5 + memoryBudgetLimitKB * 0.05).toFixed(1)} ms`;
       applyComputeBudget();
     });
-  });
-
-  // ─── Snapshot Capture Action ───────────────────────────────────────────────
-  btnCaptureSnapshot.addEventListener('click', () => {
-    snapshotCount += 1;
-    metricSnapshotsVal.textContent = snapshotCount;
-    playClickSound(1200, 'sine', 0.1);
-
-    btnCaptureSnapshot.style.transform = 'scale(0.92)';
-    setTimeout(() => btnCaptureSnapshot.style.transform = '', 120);
-
-    showToast(`Snapshot #${snapshotCount} captured & aligned to WorldMap`, '📸');
-    appendLog('SNAP', `Snapshot #${snapshotCount} saved. 2.5D elevation grid updated.`, 'green');
-  });
-
-  document.getElementById('card-snapshot-metric').addEventListener('click', () => {
-    btnCaptureSnapshot.click();
-  });
-
-  // ─── Mode Switcher Menu ────────────────────────────────────────────────────
-  modeTriggerBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    modeDropdownMenu.classList.toggle('open');
-    playClickSound(800, 'sine', 0.04);
-  });
-
-  document.addEventListener('click', () => {
-    modeDropdownMenu.classList.remove('open');
-  });
-
-  const dropdownItems = document.querySelectorAll('.dropdown-item');
-  dropdownItems.forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdownItems.forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-
-      const mode = item.dataset.mode;
-      currentMode = mode;
-      currentModeName.textContent = item.querySelector('span').textContent;
-      modeDropdownMenu.classList.remove('open');
-      playClickSound(1000, 'sine', 0.06);
-
-      showToast(`View mode switched to: ${item.querySelector('span').textContent}`, '👁️');
-      appendLog('VIEW', `Visualization layer switched to: ${mode}`, 'cyan');
-    });
-  });
-
-  // ─── Segmented Intelligence Tabs (Exact Original) ──────────────────────────
-  segButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      segButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeTab = btn.dataset.tab;
-      playClickSound(850, 'sine', 0.04);
-
-      Object.keys(tabPanels).forEach(key => {
-        if (key === activeTab) {
-          tabPanels[key].classList.remove('hidden');
-          tabPanels[key].classList.add('active');
-        } else {
-          tabPanels[key].classList.add('hidden');
-          tabPanels[key].classList.remove('active');
-        }
-      });
-    });
-  });
-
-  // ─── Blueprint Scenario Simulations (Exact Original Set) ───────────────────
-  const btnSceneBaseline = document.getElementById('btn-scene-baseline');
-  const btnSceneDoorway = document.getElementById('btn-scene-doorway');
-  const btnScenePerson = document.getElementById('btn-scene-person');
-  const btnSceneChair = document.getElementById('btn-scene-chair');
-  const allSceneBtns = [btnSceneBaseline, btnSceneDoorway, btnScenePerson, btnSceneChair];
-
-  function setActiveSceneBtn(activeBtn) {
-    allSceneBtns.forEach(b => b.classList.remove('active'));
-    activeBtn.classList.add('active');
   }
 
-  btnSceneBaseline.addEventListener('click', () => {
-    setActiveSceneBtn(btnSceneBaseline);
-    currentScenario = 'baseline';
-    buildGrid('baseline');
-    confidenceVal = 87;
-    confidenceValEl.textContent = '87%';
-    confidenceArc.style.strokeDashoffset = '19.6';
-    diagClearance.textContent = '102 cm';
-    diagClearanceSub.textContent = 'Doorway Normal';
+  if (presetButtons && presetButtons.length > 0) {
+    presetButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        presetButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const bgt = parseInt(btn.dataset.budget, 10);
+        memoryBudgetLimitKB = bgt;
+        if (budgetSlider) budgetSlider.value = bgt;
+        if (budgetSliderVal) budgetSliderVal.textContent = `${bgt} KB`;
+        if (budgetModeBadge) budgetModeBadge.textContent = `Target: ${bgt} KB / ${(1.5 + bgt * 0.05).toFixed(1)} ms`;
+        playClickSound(820, 'sine', 0.05);
+
+        showToast(`Hardware profile: ${btn.querySelector('.preset-title')?.textContent || bgt + ' KB'}`, '⚙️');
+        appendLog('BUDGET', `Hardware budget governor set to ${bgt} KB limit.`, 'cyan');
+        applyComputeBudget();
+      });
+    });
+  }
+
+  // ─── Snapshot Capture Action (Guarded) ─────────────────────────────────────
+  if (btnCaptureSnapshot) {
+    btnCaptureSnapshot.addEventListener('click', () => {
+      snapshotCount += 1;
+      if (metricSnapshotsVal) metricSnapshotsVal.textContent = snapshotCount;
+      playClickSound(1200, 'sine', 0.1);
+
+      btnCaptureSnapshot.style.transform = 'scale(0.92)';
+      setTimeout(() => btnCaptureSnapshot.style.transform = '', 120);
+
+      showToast(`Snapshot #${snapshotCount} captured & aligned to WorldMap`, '📸');
+      appendLog('SNAP', `Snapshot #${snapshotCount} saved. 2.5D elevation grid updated.`, 'green');
+    });
+  }
+
+  const cardSnapshotMetric = document.getElementById('card-snapshot-metric');
+  if (cardSnapshotMetric && btnCaptureSnapshot) {
+    cardSnapshotMetric.addEventListener('click', () => {
+      btnCaptureSnapshot.click();
+    });
+  }
+
+  // ─── Mode Switcher Menu (Guarded) ──────────────────────────────────────────
+  if (modeTriggerBtn && modeDropdownMenu) {
+    modeTriggerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      modeDropdownMenu.classList.toggle('open');
+      playClickSound(800, 'sine', 0.04);
+    });
+
+    document.addEventListener('click', () => {
+      modeDropdownMenu.classList.remove('open');
+    });
+
+    const dropdownItems = document.querySelectorAll('.dropdown-item');
+    dropdownItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        const mode = item.dataset.mode;
+        currentMode = mode;
+        if (currentModeName) currentModeName.textContent = item.querySelector('span')?.textContent || mode;
+        modeDropdownMenu.classList.remove('open');
+        playClickSound(1000, 'sine', 0.06);
+
+        showToast(`View mode switched to: ${item.querySelector('span')?.textContent || mode}`, '👁️');
+        appendLog('VIEW', `Visualization layer switched to: ${mode}`, 'cyan');
+      });
+    });
+  }
+
+  // ─── Segmented Intelligence Tabs (Guarded) ────────────────────────────────
+  if (segButtons && segButtons.length > 0) {
+    segButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        segButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTab = btn.dataset.tab;
+        playClickSound(850, 'sine', 0.04);
+
+        Object.keys(tabPanels).forEach(key => {
+          const panel = tabPanels[key];
+          if (!panel) return;
+          if (key === activeTab) {
+            panel.classList.remove('hidden');
+            panel.classList.add('active');
+          } else {
+            panel.classList.add('hidden');
+            panel.classList.remove('active');
+          }
+        });
+      });
+    });
+  }
+
+  // ─── Unified Scenario Tabs & Traversal Engine ─────────────────────────────
+  const SCENARIOS = [
+    {
+      id: 'baseline',
+      title: 'Baseline Scan',
+      icon: '🔄',
+      conf: 87,
+      clearance: '102 cm',
+      clearanceSub: 'Doorway Normal',
+      clearanceColor: '#10b981',
+      density: 65,
+      bandwidth: 100,
+      latency: 4.0,
+      residual: '2.45%',
+      kernelLat: '1.15 ms',
+      cpu: 29,
+      mem: 65,
+      drift: 5,
+      changesHtml: `
+        <div class="change-row">
+          <div class="change-icon-badge orange">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title">Object moved</div>
+            <div class="change-desc">Table edge shifted 24 cm</div>
+          </div>
+          <div class="change-time">Now</div>
+        </div>
+        <div class="change-row">
+          <div class="change-icon-badge cyan">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path><path d="M2 7h3M19 7h3M2 17h3M19 17h3"></path></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title">Motion cluster tracked</div>
+            <div class="change-desc">Anonymous moving volume crossed the map</div>
+          </div>
+          <div class="change-time">8s</div>
+        </div>
+        <div class="change-row">
+          <div class="change-icon-badge pink">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title">Uncertain region</div>
+            <div class="change-desc">Scan recommended near doorway</div>
+          </div>
+          <div class="change-time">2m</div>
+        </div>
+      `
+    },
+    {
+      id: 'doorway',
+      title: 'Doorway Blocked',
+      icon: '🚪',
+      conf: 91,
+      clearance: '38 cm',
+      clearanceSub: 'CRITICAL (-62%)',
+      clearanceColor: '#f97316',
+      density: 85,
+      bandwidth: 100,
+      latency: 4.8,
+      residual: '4.82%',
+      kernelLat: '1.85 ms',
+      cpu: 38,
+      mem: 72,
+      drift: 8,
+      changesHtml: `
+        <div class="change-row" style="background: rgba(249, 115, 22, 0.12); border-color: rgba(249, 115, 22, 0.4);">
+          <div class="change-icon-badge orange">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title" style="color: #f97316;">SAFETY ALERT: Exit Obstructed</div>
+            <div class="change-desc">Exit clearance reduced by 62%. New obstacle detected with 91% confidence.</div>
+          </div>
+          <div class="change-time">Now</div>
+        </div>
+        <div class="change-row">
+          <div class="change-icon-badge cyan">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title">Doorway Zone Monitored</div>
+            <div class="change-desc">Safety rule: clearance threshold = 80 cm</div>
+          </div>
+          <div class="change-time">12s</div>
+        </div>
+      `
+    },
+    {
+      id: 'person',
+      title: 'Moving Person',
+      icon: '🚶',
+      conf: 94,
+      clearance: '95 cm',
+      clearanceSub: 'Transient Object',
+      clearanceColor: '#22d3ee',
+      density: 75,
+      bandwidth: 100,
+      latency: 3.8,
+      residual: '1.92%',
+      kernelLat: '0.98 ms',
+      cpu: 42,
+      mem: 68,
+      drift: 4,
+      changesHtml: `
+        <div class="change-row" style="background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35);">
+          <div class="change-icon-badge cyan">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path><path d="M2 7h3M19 7h3M2 17h3M19 17h3"></path></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title" style="color: #22d3ee;">Anonymous Motion Volume</div>
+            <div class="change-desc">Transient occlusion masked; static room baseline preserved. Privacy ON.</div>
+          </div>
+          <div class="change-time">Now</div>
+        </div>
+      `
+    },
+    {
+      id: 'chair',
+      title: 'Furniture Shift',
+      icon: '🪑',
+      conf: 96,
+      clearance: '88 cm',
+      clearanceSub: 'Static Displacement',
+      clearanceColor: '#f97316',
+      density: 70,
+      bandwidth: 100,
+      latency: 4.2,
+      residual: '3.15%',
+      kernelLat: '1.22 ms',
+      cpu: 31,
+      mem: 64,
+      drift: 6,
+      changesHtml: `
+        <div class="change-row">
+          <div class="change-icon-badge orange">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+          </div>
+          <div class="change-texts">
+            <div class="change-title">Furniture Shift Detected</div>
+            <div class="change-desc">Office chair shifted 38 cm; persistence score 0.96</div>
+          </div>
+          <div class="change-time">Now</div>
+        </div>
+      `
+    }
+  ];
+
+  let currentScenarioIndex = 0;
+  const sceneButtons = document.querySelectorAll('.scenario-tabs-track .pill-btn, .scenario-actions .pill-btn');
+
+  function switchScenario(target) {
+    let index = 0;
+    if (typeof target === 'number') {
+      index = (target + SCENARIOS.length) % SCENARIOS.length;
+    } else {
+      const found = SCENARIOS.findIndex(s => s.id === target);
+      index = found !== -1 ? found : 0;
+    }
+
+    currentScenarioIndex = index;
+    const sc = SCENARIOS[index];
+    currentScenario = sc.id;
+
+    // Update Tab UI
+    sceneButtons.forEach(btn => {
+      if (!btn) return;
+      const bScene = (btn.dataset && btn.dataset.scene) || 
+                     (btn.getAttribute && btn.getAttribute('data-scene')) || 
+                     (btn.id ? btn.id.replace('btn-scene-', '') : '');
+      const match = bScene === sc.id || btn.id === `btn-scene-${sc.id}`;
+      if (match) {
+        btn.classList.add('active');
+        if (btn.setAttribute) btn.setAttribute('aria-selected', 'true');
+      } else {
+        btn.classList.remove('active');
+        if (btn.setAttribute) btn.setAttribute('aria-selected', 'false');
+      }
+    });
+
+    // Rebuild Map Grid
+    buildGrid(sc.id);
+
+    // Update Phone telemetry
+    confidenceVal = sc.conf;
+    if (confidenceValEl) confidenceValEl.textContent = `${sc.conf}%`;
+    if (confidenceArc) confidenceArc.style.strokeDashoffset = `${150 * (1 - sc.conf / 100)}`;
+    if (diagClearance) {
+      diagClearance.textContent = sc.clearance;
+      diagClearance.style.color = sc.clearanceColor;
+    }
+    if (diagClearanceSub) diagClearanceSub.textContent = sc.clearanceSub;
+    if (changesList) changesList.innerHTML = sc.changesHtml;
+
+    // Update Control Station Cards
+    const sliderDensity = document.getElementById('slider-density');
+    const valDensity = document.getElementById('val-density');
+    const sliderLatency = document.getElementById('slider-latency');
+    const valLatency = document.getElementById('val-latency');
+    const diagResidualVal = document.getElementById('diag-residual-val');
+    const diagLatencyVal = document.getElementById('diag-latency-val');
+    const ringCpuText = document.getElementById('ring-cpu-text');
+    const ringCpuFg = document.getElementById('ring-cpu-fg');
+    const ringMemText = document.getElementById('ring-mem-text');
+    const ringMemFg = document.getElementById('ring-mem-fg');
+    const ringDriftText = document.getElementById('ring-drift-text');
+    const ringDriftFg = document.getElementById('ring-drift-fg');
+
+    if (sliderDensity && valDensity) {
+      sliderDensity.value = sc.density;
+      valDensity.textContent = `${sc.density}%`;
+    }
+    if (sliderLatency && valLatency) {
+      sliderLatency.value = sc.latency;
+      valLatency.textContent = `${sc.latency.toFixed(1)}%`;
+    }
+    if (diagResidualVal) diagResidualVal.textContent = sc.residual;
+    if (diagLatencyVal) diagLatencyVal.textContent = sc.kernelLat;
+
+    if (ringCpuText) ringCpuText.textContent = `${sc.cpu}%`;
+    if (ringCpuFg) ringCpuFg.style.strokeDashoffset = (138.2 * (1 - sc.cpu / 100)).toFixed(1);
+    if (ringMemText) ringMemText.textContent = `${sc.mem}%`;
+    if (ringMemFg) ringMemFg.style.strokeDashoffset = (138.2 * (1 - sc.mem / 100)).toFixed(1);
+    if (ringDriftText) ringDriftText.textContent = `${sc.drift}%`;
+    if (ringDriftFg) ringDriftFg.style.strokeDashoffset = (138.2 * (1 - sc.drift / 100)).toFixed(1);
+
     playClickSound(880, 'sine', 0.08);
+    showToast(`Switched Tab [${index + 1}/${SCENARIOS.length}]: ${sc.title}`, sc.icon);
+    appendLog('SCENE', `Loaded scenario [${sc.id.toUpperCase()}]: ${sc.title}`, 'cyan');
+  }
 
-    changesList.innerHTML = `
-      <div class="change-row">
-        <div class="change-icon-badge orange">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title">Object moved</div>
-          <div class="change-desc">Table edge shifted 24 cm</div>
-        </div>
-        <div class="change-time">Now</div>
-      </div>
-      <div class="change-row">
-        <div class="change-icon-badge cyan">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path><path d="M2 7h3M19 7h3M2 17h3M19 17h3"></path></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title">Motion cluster tracked</div>
-          <div class="change-desc">Anonymous moving volume crossed the map</div>
-        </div>
-        <div class="change-time">8s</div>
-      </div>
-      <div class="change-row">
-        <div class="change-icon-badge pink">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title">Uncertain region</div>
-          <div class="change-desc">Scan recommended near doorway</div>
-        </div>
-        <div class="change-time">2m</div>
-      </div>
-    `;
-
-    showToast('Reset to Baseline Room Scan', '🔄');
-    appendLog('RESET', 'Loaded reference baseline geometry.', 'cyan');
+  // Bind Scene Buttons
+  sceneButtons.forEach(btn => {
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const scene = (btn.dataset && btn.dataset.scene) || 
+                    (btn.getAttribute && btn.getAttribute('data-scene')) || 
+                    (btn.id ? btn.id.replace('btn-scene-', '') : 'baseline');
+      switchScenario(scene);
+    });
   });
 
-  btnSceneDoorway.addEventListener('click', () => {
-    setActiveSceneBtn(btnSceneDoorway);
-    currentScenario = 'doorway';
-    buildGrid('doorway');
-    confidenceVal = 91;
-    confidenceValEl.textContent = '91%';
-    confidenceArc.style.strokeDashoffset = '13.5';
-    diagClearance.textContent = '38 cm';
-    diagClearanceSub.textContent = 'CRITICAL (-62%)';
-    diagClearance.style.color = '#f97316';
-    playClickSound(520, 'sawtooth', 0.15);
+  // Tab Traversal Buttons (‹ and ›)
+  const btnPrevTab = document.getElementById('btn-prev-tab');
+  if (btnPrevTab) {
+    btnPrevTab.addEventListener('click', () => {
+      switchScenario(currentScenarioIndex - 1);
+    });
+  }
 
-    changesList.innerHTML = `
-      <div class="change-row" style="background: rgba(249, 115, 22, 0.12); border-color: rgba(249, 115, 22, 0.4);">
-        <div class="change-icon-badge orange">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title" style="color: #f97316;">SAFETY ALERT: Exit Obstructed</div>
-          <div class="change-desc">Exit clearance reduced by 62%. New obstacle detected with 91% confidence.</div>
-        </div>
-        <div class="change-time">Now</div>
-      </div>
-      <div class="change-row">
-        <div class="change-icon-badge cyan">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title">Doorway Zone Monitored</div>
-          <div class="change-desc">Safety rule: clearance threshold = 80 cm</div>
-        </div>
-        <div class="change-time">12s</div>
-      </div>
-    `;
+  const btnNextTab = document.getElementById('btn-next-tab');
+  if (btnNextTab) {
+    btnNextTab.addEventListener('click', () => {
+      switchScenario(currentScenarioIndex + 1);
+    });
+  }
 
-    showToast('CRITICAL: Exit clearance reduced by 62%!', '⚠️');
-    appendLog('ALERT', 'Blocked doorway rule triggered! Clearance: 38cm (Min 80cm required).', 'orange');
-  });
+  // Auto-Tour Traversal
+  const btnAutoTour = document.getElementById('btn-auto-tour');
+  let tourInterval = null;
+  if (btnAutoTour) {
+    btnAutoTour.addEventListener('click', () => {
+      if (tourInterval) {
+        clearInterval(tourInterval);
+        tourInterval = null;
+        btnAutoTour.classList.remove('active');
+        btnAutoTour.textContent = '▶ Auto-Tour';
+        showToast('Auto-Tour Paused', '⏸');
+      } else {
+        btnAutoTour.classList.add('active');
+        btnAutoTour.textContent = '❚❚ Tour Active';
+        showToast('Auto-Tour active: traversing tabs every 5s', '🚀');
+        tourInterval = setInterval(() => {
+          switchScenario(currentScenarioIndex + 1);
+        }, 5000);
+      }
+    });
+  }
 
-  btnScenePerson.addEventListener('click', () => {
-    setActiveSceneBtn(btnScenePerson);
-    currentScenario = 'person';
-    buildGrid('person');
-    playClickSound(880, 'sine', 0.08);
-
-    changesList.innerHTML = `
-      <div class="change-row" style="background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35);">
-        <div class="change-icon-badge cyan">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path><path d="M2 7h3M19 7h3M2 17h3M19 17h3"></path></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title" style="color: #22d3ee;">Anonymous Motion Volume</div>
-          <div class="change-desc">Transient occlusion masked; static room baseline preserved. Privacy ON.</div>
-        </div>
-        <div class="change-time">Now</div>
-      </div>
-    `;
-
-    showToast('Tracking anonymous motion volume (identity suppressed)', '🚶');
-    appendLog('MOTION', 'Person tracked: velocity 0.85 m/s. Faces/identity suppressed.', 'cyan');
-  });
-
-  btnSceneChair.addEventListener('click', () => {
-    setActiveSceneBtn(btnSceneChair);
-    currentScenario = 'chair';
-    buildGrid('chair');
-    playClickSound(880, 'sine', 0.08);
-
-    changesList.innerHTML = `
-      <div class="change-row">
-        <div class="change-icon-badge orange">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-        </div>
-        <div class="change-texts">
-          <div class="change-title">Furniture Shift Detected</div>
-          <div class="change-desc">Office chair shifted 38 cm; persistence score 0.96</div>
-        </div>
-        <div class="change-time">Now</div>
-      </div>
-    `;
-
-    showToast('Detected persistent furniture displacement: 38 cm', '🪑');
-    appendLog('CHANGE', 'Persistent object displacement: 38 cm. Motion score 0.96.', 'orange');
-  });
-
-  // ─── View Toggle (Phone Frame vs Station View) ─────────────────────────────
+  // ─── View Modes Switching & Traversal ─────────────────────────────────────
   const toggleDeviceView = document.getElementById('toggle-device-view');
   const toggleStationView = document.getElementById('toggle-station-view');
+  const toggleSplitView = document.getElementById('toggle-split-view');
   const appLayout = document.getElementById('app-layout');
 
-  toggleDeviceView.addEventListener('click', () => {
-    toggleDeviceView.classList.add('active');
-    toggleStationView.classList.remove('active');
-    appLayout.classList.add('phone-only');
-    playClickSound(750, 'sine', 0.05);
-  });
+  function setViewMode(mode) {
+    if (!appLayout) return;
+    appLayout.classList.remove('phone-only', 'station-only', 'split-view');
+    [toggleDeviceView, toggleStationView, toggleSplitView].forEach(b => {
+      if (b) {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      }
+    });
 
-  toggleStationView.addEventListener('click', () => {
-    toggleStationView.classList.add('active');
-    toggleDeviceView.classList.remove('active');
-    appLayout.classList.remove('phone-only');
+    if (mode === 'station') {
+      appLayout.classList.add('station-only');
+      if (toggleStationView) {
+        toggleStationView.classList.add('active');
+        toggleStationView.setAttribute('aria-selected', 'true');
+      }
+      showToast('View: Control Station (Full Width)', '🖥️');
+      appendLog('VIEW', 'Switched to 6-card Control Station.', 'cyan');
+    } else if (mode === 'phone') {
+      appLayout.classList.add('phone-only');
+      if (toggleDeviceView) {
+        toggleDeviceView.classList.add('active');
+        toggleDeviceView.setAttribute('aria-selected', 'true');
+      }
+      showToast('View: Mobile iPhone 16 Pro View', '📱');
+      appendLog('VIEW', 'Switched to Mobile iPhone 16 Pro view.', 'cyan');
+    } else if (mode === 'split') {
+      appLayout.classList.add('split-view');
+      if (toggleSplitView) {
+        toggleSplitView.classList.add('active');
+        toggleSplitView.setAttribute('aria-selected', 'true');
+      }
+      showToast('View: Side-by-Side Split View', '🔀');
+      appendLog('VIEW', 'Switched to Side-by-Side Split View.', 'cyan');
+    }
     playClickSound(750, 'sine', 0.05);
+  }
+
+  if (toggleStationView) {
+    toggleStationView.addEventListener('click', () => setViewMode('station'));
+  }
+  if (toggleDeviceView) {
+    toggleDeviceView.addEventListener('click', () => setViewMode('phone'));
+  }
+  if (toggleSplitView) {
+    toggleSplitView.addEventListener('click', () => setViewMode('split'));
+  }
+
+  // Keyboard Navigation / Traversal
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      switchScenario(currentScenarioIndex + 1);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      switchScenario(currentScenarioIndex - 1);
+    } else if (e.key === '1') {
+      switchScenario(0);
+    } else if (e.key === '2') {
+      switchScenario(1);
+    } else if (e.key === '3') {
+      switchScenario(2);
+    } else if (e.key === '4') {
+      switchScenario(3);
+    } else if (e.key === 'v' || e.key === 'V') {
+      if (appLayout.classList.contains('station-only')) {
+        setViewMode('phone');
+      } else if (appLayout.classList.contains('phone-only')) {
+        setViewMode('split');
+      } else {
+        setViewMode('station');
+      }
+    } else if (e.key === ' ' || e.key === 'p' || e.key === 'P') {
+      e.preventDefault();
+      if (btnToggleScan) btnToggleScan.click();
+    }
   });
 
   // ─── 6-Card Control Station Logic & Interactive Canvases ────────────────────
@@ -1441,56 +1659,65 @@
     if (e.target === guideModal) guideModal.classList.add('hidden');
   });
 
-  document.getElementById('btn-clear-logs').addEventListener('click', () => {
-    auditLogs.innerHTML = '';
-    playClickSound(600, 'sine', 0.04);
-  });
+  const btnClearLogs = document.getElementById('btn-clear-logs');
+  if (btnClearLogs) {
+    btnClearLogs.addEventListener('click', () => {
+      if (auditLogs) auditLogs.innerHTML = '';
+      playClickSound(600, 'sine', 0.04);
+    });
+  }
 
   // ─── Export Actions ────────────────────────────────────────────────────────
-  document.getElementById('btn-export-json').addEventListener('click', () => {
-    const data = {
-      product: 'Spatial Sentinel',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      scenario: currentScenario,
-      confidence: confidenceVal,
-      budget: {
-        memoryKB: actualMemoryKB,
-        latencyMs: actualLatencyMs,
-        rmseCm: actualRmseCm
-      },
-      grid: {
-        columns: COLS,
-        rows: ROWS,
-        cells: cells
-      }
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `spatial_sentinel_map_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Exported 2.5D spatial map to JSON', '💾');
-    appendLog('EXPORT', 'JSON map data serialized and downloaded.', 'green');
-  });
-
-  document.getElementById('btn-export-csv').addEventListener('click', () => {
-    let csv = 'Column,Row,Kind,Height_M,Confidence_Pct,Semantic\n';
-    cells.forEach(c => {
-      csv += `${c.col},${c.row},${c.kind},${c.height},${c.confidence},"${c.semantic}"\n`;
+  const btnExportJson = document.getElementById('btn-export-json');
+  if (btnExportJson) {
+    btnExportJson.addEventListener('click', () => {
+      const data = {
+        product: 'Spatial Sentinel',
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        scenario: currentScenario,
+        confidence: confidenceVal,
+        budget: {
+          memoryKB: actualMemoryKB,
+          latencyMs: actualLatencyMs,
+          rmseCm: actualRmseCm
+        },
+        grid: {
+          columns: COLS,
+          rows: ROWS,
+          cells: cells
+        }
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spatial_sentinel_map_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported 2.5D spatial map to JSON', '💾');
+      appendLog('EXPORT', 'JSON map data serialized and downloaded.', 'green');
     });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `spatial_sentinel_cells_${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Exported cell matrix to CSV', '📊');
-    appendLog('EXPORT', 'CSV elevation matrix generated.', 'green');
-  });
+  }
+
+  const btnExportCsv = document.getElementById('btn-export-csv');
+  if (btnExportCsv) {
+    btnExportCsv.addEventListener('click', () => {
+      let csv = 'Column,Row,Kind,Height_M,Confidence_Pct,Semantic\n';
+      cells.forEach(c => {
+        csv += `${c.col},${c.row},${c.kind},${c.height},${c.confidence},"${c.semantic}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spatial_sentinel_cells_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported cell matrix to CSV', '📊');
+      appendLog('EXPORT', 'CSV elevation matrix generated.', 'green');
+    });
+  }
 
   // ─── Link-Only Access Gate (Enforces Link-Only Access) ────────────────────
   const lockGate = document.getElementById('lock-gate');
