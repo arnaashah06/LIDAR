@@ -1789,4 +1789,509 @@ input:checked + .slider:before {
   font-family: var(--font-mono);
 }
 
+/* ==========================================================================
+   6-Card Control Station Dashboard (Matching User Video Screenshot)
+   ========================================================================== */
+
+.app-layout.station-mode {
+  display: block;
+  max-width: 1560px;
+}
+
+.app-layout.station-mode .device-section {
+  display: none;
+}
+
+.app-layout.station-mode .station-section {
+  width: 100%;
+}
+
+.station-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  width: 100%;
+}
+
+.dash-card {
+  background: rgba(16, 22, 36, 0.94);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  backdrop-filter: blur(16px);
+  position: relative;
+  transition: border-color 0.2s ease;
+}
+
+.dash-card:hover {
+  border-color: rgba(6, 182, 212, 0.25);
+}
+
+.dash-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.dash-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.title-bar.cyan {
+  width: 3px;
+  height: 14px;
+  background: var(--cyan);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.card-badges {
+  display: flex;
+  gap: 5px;
+}
+
+.mini-pill {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.mini-pill.cyan {
+  background: var(--cyan-dim);
+  color: var(--cyan-bright);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.mini-pill.green {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.mini-pill.outline {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Card 1: Sliders & Waveform */
+.controller-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 85px 1fr 45px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.slider-name {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.slider-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+}
+
+.custom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.custom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.custom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.card-inner-chart {
+  background: rgba(6, 9, 16, 0.9);
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chart-sub-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.chart-sub-tag {
+  font-family: var(--font-mono);
+  color: var(--cyan);
+}
+
+.canvas-wrap {
+  width: 100%;
+  height: 110px;
+}
+
+#lidar-stream-canvas, #diagnostics-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Card 2: Accordion List */
+.accordion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accordion-item {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accordion-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(6, 182, 212, 0.25);
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.acc-chevron {
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.accordion-item.active .acc-chevron {
+  transform: rotate(90deg);
+  color: var(--cyan);
+}
+
+.accordion-content {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.acc-info-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+
+/* Card 3: Dual Big Metrics */
+.dual-metric-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.big-metric-box {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.big-metric-val {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: -0.5px;
+}
+
+.big-metric-val.cyan { color: var(--cyan); }
+.big-metric-val.green { color: var(--green); }
+
+.big-metric-lbl {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* Card 4: Evaluation Benchmark Table */
+.benchmark-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-align: left;
+}
+
+.benchmark-data-table th {
+  color: var(--text-dim);
+  font-weight: 700;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.benchmark-data-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+}
+
+.benchmark-data-table tr.highlight-row {
+  background: rgba(6, 182, 212, 0.1) !important;
+  border-left: 2px solid var(--cyan);
+}
+
+.benchmark-data-table tr.highlight-row td {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.benchmark-data-table tr.total-row td {
+  color: var(--cyan);
+  font-weight: 700;
+  border-top: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.text-cyan { color: var(--cyan) !important; }
+.text-green { color: var(--green) !important; }
+.text-orange { color: var(--orange) !important; }
+
+/* Card 5: Radar / Spider Chart */
+.radar-chart-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 210px;
+}
+
+#radar-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.radar-center-badge {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  border-radius: 8px;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rc-val {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+}
+
+.rc-sub {
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+/* Card 6: Progress Rings & Smart Live */
+.progress-rings-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ring-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.mini-ring {
+  transform: rotate(-90deg);
+}
+
+.mring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 4;
+}
+
+.mring-fg {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 138.2; /* 2 * PI * 22 */
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.mring-fg.cyan { stroke: var(--cyan); }
+.mring-fg.green { stroke: var(--green); }
+.mring-fg.orange { stroke: var(--orange); }
+
+.mring-text {
+  position: absolute;
+  top: 17px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #ffffff;
+}
+
+.mring-lbl {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.smart-live-container {
+  background: rgba(6, 9, 16, 0.9);
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.smart-live-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+#smart-live-canvas {
+  width: 100%;
+  height: 75px;
+  display: block;
+}
+
+/* Bottom Sentinel Banner */
+.bottom-sentinel-banner {
+  margin-top: 20px;
+  background: rgba(9, 13, 22, 0.92);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-bracket {
+  color: var(--cyan);
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.banner-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.banner-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.banner-btn:hover {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+/* Responsive Grid for Control Station */
+@media (max-width: 1200px) {
+  .station-grid-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .station-grid-6 {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 

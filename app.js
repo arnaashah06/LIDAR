@@ -555,6 +555,7 @@
     } else {
       render2DMap(timestamp);
     }
+    renderStationCanvases(timestamp);
     requestAnimationFrame(renderLoop);
   }
 
@@ -640,9 +641,12 @@
     isScanning = !isScanning;
     playClickSound(640, 'triangle', 0.08);
 
+    const bannerPlayBtn = document.getElementById('banner-play-btn');
+
     if (isScanning) {
       iconPause.classList.remove('hidden');
       iconPlay.classList.add('hidden');
+      if (bannerPlayBtn) bannerPlayBtn.textContent = '⏸';
       statusTitleText.textContent = 'Live scan active';
       statusSubText.textContent = 'Confidence is high across the mapped area';
       islandLidar.style.display = 'flex';
@@ -650,6 +654,7 @@
     } else {
       iconPause.classList.add('hidden');
       iconPlay.classList.remove('hidden');
+      if (bannerPlayBtn) bannerPlayBtn.textContent = '▶';
       statusTitleText.textContent = 'Scan paused';
       statusSubText.textContent = 'LiDAR frame streaming on hold';
       islandLidar.style.display = 'none';
@@ -928,6 +933,495 @@
     appLayout.classList.remove('phone-only');
     playClickSound(750, 'sine', 0.05);
   });
+
+  // ─── 6-Card Control Station Logic & Interactive Canvases ────────────────────
+  const sliderDensity = document.getElementById('slider-density');
+  const sliderBandwidth = document.getElementById('slider-bandwidth');
+  const sliderLatency = document.getElementById('slider-latency');
+  const valDensity = document.getElementById('val-density');
+  const valBandwidth = document.getElementById('val-bandwidth');
+  const valLatency = document.getElementById('val-latency');
+  const controllerFpsBadge = document.getElementById('controller-fps-badge');
+  const controllerFpsVal = document.getElementById('controller-fps-val');
+
+  const lidarStreamCanvas = document.getElementById('lidar-stream-canvas');
+  const lidarStreamCtx = lidarStreamCanvas ? lidarStreamCanvas.getContext('2d') : null;
+
+  const accGhost = document.getElementById('acc-ghost');
+  const accQuadtree1 = document.getElementById('acc-quadtree1');
+  const accQuadtree2 = document.getElementById('acc-quadtree2');
+
+  const diagnosticsCanvas = document.getElementById('diagnostics-canvas');
+  const diagnosticsCtx = diagnosticsCanvas ? diagnosticsCanvas.getContext('2d') : null;
+  const diagResidualVal = document.getElementById('diag-residual-val');
+  const diagLatencyVal = document.getElementById('diag-latency-val');
+
+  const radarCanvas = document.getElementById('radar-canvas');
+  const radarCtx = radarCanvas ? radarCanvas.getContext('2d') : null;
+
+  const smartLiveCanvas = document.getElementById('smart-live-canvas');
+  const smartLiveCtx = smartLiveCanvas ? smartLiveCanvas.getContext('2d') : null;
+  const ringCpuText = document.getElementById('ring-cpu-text');
+  const ringCpuFg = document.getElementById('ring-cpu-fg');
+  const ringMemText = document.getElementById('ring-mem-text');
+  const ringMemFg = document.getElementById('ring-mem-fg');
+  const ringDriftText = document.getElementById('ring-drift-text');
+  const ringDriftFg = document.getElementById('ring-drift-fg');
+
+  const bannerPlayBtn = document.getElementById('banner-play-btn');
+  const bannerFsBtn = document.getElementById('banner-fs-btn');
+
+  // Sliders in Card 1
+  if (sliderDensity && valDensity) {
+    sliderDensity.addEventListener('input', (e) => {
+      const v = e.target.value;
+      valDensity.textContent = `${v}%`;
+    });
+  }
+
+  if (sliderBandwidth && valBandwidth) {
+    sliderBandwidth.addEventListener('input', (e) => {
+      const v = e.target.value;
+      valBandwidth.textContent = `${v}%`;
+    });
+  }
+
+  if (sliderLatency && valLatency) {
+    sliderLatency.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value).toFixed(1);
+      valLatency.textContent = `${v}%`;
+      actualLatencyMs = (v * 0.9).toFixed(1);
+      if (diagLatencyVal) {
+        diagLatencyVal.textContent = `${(actualLatencyMs * 0.32).toFixed(2)} ms`;
+      }
+    });
+  }
+
+  // Accordions in Card 2
+  [accGhost, accQuadtree1, accQuadtree2].forEach(item => {
+    if (!item) return;
+    const header = item.querySelector('.accordion-header');
+    const content = item.querySelector('.accordion-content');
+    if (header && content) {
+      header.addEventListener('click', () => {
+        const isOpen = item.classList.contains('active');
+        if (isOpen) {
+          item.classList.remove('active');
+          content.classList.add('hidden');
+        } else {
+          item.classList.add('active');
+          content.classList.remove('hidden');
+        }
+        playClickSound(800, 'sine', 0.04);
+      });
+    }
+  });
+
+  // Bottom Banner actions
+  if (bannerPlayBtn) {
+    bannerPlayBtn.addEventListener('click', () => {
+      btnToggleScan.click();
+    });
+  }
+
+  if (bannerFsBtn) {
+    bannerFsBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        bannerFsBtn.textContent = '✕';
+      } else {
+        document.exitFullscreen().catch(() => {});
+        bannerFsBtn.textContent = '⛶';
+      }
+      playClickSound(850, 'sine', 0.05);
+    });
+  }
+
+  // Card 4: Evaluation Benchmark Table Row Clicks
+  const benchTable = document.querySelector('.benchmark-data-table');
+  if (benchTable) {
+    benchTable.addEventListener('click', (e) => {
+      const tr = e.target.closest('tr');
+      if (tr && !tr.closest('thead')) {
+        playClickSound(950, 'sine', 0.04);
+        if (tr.classList.contains('highlight-row')) {
+          showToast('Spatial Sentinel: 3.076 MB vs 31.25 MB baseline (-90.1% memory saving)', '🚀');
+        } else {
+          showToast(`Row benchmark: ${tr.cells[0]?.textContent || ''} MB / ${tr.cells[3]?.textContent || ''} latency`, '📊');
+        }
+      }
+    });
+  }
+
+  // ─── Canvases Animation State & Renderers ─────────────────────────────────
+
+  // 1. LiDAR Ray Stream (Card 1)
+  const lidarPoints = 50;
+  const lidarStreamData = [];
+  for (let i = 0; i < lidarPoints; i++) {
+    lidarStreamData.push(700 + Math.sin(i * 0.35) * 450 + Math.cos(i * 0.8) * 300);
+  }
+  let lastLidarTick = 0;
+
+  function updateLidarStream(timestamp) {
+    if (!isScanning) return;
+    if (timestamp - lastLidarTick < 40) return;
+    lastLidarTick = timestamp;
+
+    const density = sliderDensity ? parseInt(sliderDensity.value, 10) / 100 : 0.65;
+    const bandwidth = sliderBandwidth ? parseInt(sliderBandwidth.value, 10) / 100 : 1.0;
+    const baseRay = 1100 * density * bandwidth;
+    const noise = (Math.random() - 0.5) * 200 * density;
+    const wave = Math.sin(timestamp * 0.003) * 600 * density + Math.cos(timestamp * 0.007) * 400 * density;
+    const val = Math.max(120, Math.min(2450, baseRay + wave + noise));
+
+    lidarStreamData.shift();
+    lidarStreamData.push(val);
+  }
+
+  function renderLidarStreamChart(timestamp) {
+    if (!lidarStreamCtx || !lidarStreamCanvas) return;
+    updateLidarStream(timestamp);
+
+    const w = lidarStreamCanvas.width;
+    const h = lidarStreamCanvas.height;
+    lidarStreamCtx.clearRect(0, 0, w, h);
+
+    // Horizontal grid lines (500 to 2500)
+    lidarStreamCtx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    lidarStreamCtx.lineWidth = 1;
+    lidarStreamCtx.setLineDash([3, 4]);
+
+    for (let r = 500; r <= 2500; r += 500) {
+      const y = h - (r / 2600) * (h - 20) - 8;
+      lidarStreamCtx.beginPath();
+      lidarStreamCtx.moveTo(0, y);
+      lidarStreamCtx.lineTo(w, y);
+      lidarStreamCtx.stroke();
+    }
+    lidarStreamCtx.setLineDash([]);
+
+    // Draw Filled Area Curve
+    lidarStreamCtx.beginPath();
+    lidarStreamCtx.moveTo(0, h);
+
+    const len = lidarStreamData.length;
+    for (let i = 0; i < len; i++) {
+      const x = (i / (len - 1)) * w;
+      const y = h - (lidarStreamData[i] / 2600) * (h - 20) - 8;
+      if (i === 0) lidarStreamCtx.lineTo(x, y);
+      else {
+        const prevX = ((i - 1) / (len - 1)) * w;
+        const prevY = h - (lidarStreamData[i - 1] / 2600) * (h - 20) - 8;
+        const mx = (prevX + x) / 2;
+        lidarStreamCtx.quadraticCurveTo(prevX, prevY, mx, (prevY + y) / 2);
+      }
+    }
+    lidarStreamCtx.lineTo(w, h);
+    lidarStreamCtx.closePath();
+
+    const grad = lidarStreamCtx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(6, 182, 212, 0.38)');
+    grad.addColorStop(0.6, 'rgba(6, 182, 212, 0.12)');
+    grad.addColorStop(1, 'rgba(6, 182, 212, 0.01)');
+    lidarStreamCtx.fillStyle = grad;
+    lidarStreamCtx.fill();
+
+    // Line Stroke with Cyan Glow
+    lidarStreamCtx.beginPath();
+    for (let i = 0; i < len; i++) {
+      const x = (i / (len - 1)) * w;
+      const y = h - (lidarStreamData[i] / 2600) * (h - 20) - 8;
+      if (i === 0) lidarStreamCtx.moveTo(x, y);
+      else {
+        const prevX = ((i - 1) / (len - 1)) * w;
+        const prevY = h - (lidarStreamData[i - 1] / 2600) * (h - 20) - 8;
+        const mx = (prevX + x) / 2;
+        lidarStreamCtx.quadraticCurveTo(prevX, prevY, mx, (prevY + y) / 2);
+      }
+    }
+    lidarStreamCtx.shadowColor = '#06b6d4';
+    lidarStreamCtx.shadowBlur = 8;
+    lidarStreamCtx.strokeStyle = '#22d3ee';
+    lidarStreamCtx.lineWidth = 2;
+    lidarStreamCtx.stroke();
+    lidarStreamCtx.shadowBlur = 0;
+
+    // Glowing leading apex
+    const lastX = w;
+    const lastY = h - (lidarStreamData[len - 1] / 2600) * (h - 20) - 8;
+    lidarStreamCtx.fillStyle = '#ffffff';
+    lidarStreamCtx.beginPath();
+    lidarStreamCtx.arc(lastX - 2, lastY, 3, 0, Math.PI * 2);
+    lidarStreamCtx.fill();
+  }
+
+  // 2. Diagnostics Waveform (Card 3)
+  const diagPoints = 60;
+  const diagData = [];
+  for (let i = 0; i < diagPoints; i++) {
+    diagData.push(Math.sin(i * 0.4) * 15 + Math.cos(i * 1.1) * 8);
+  }
+  let lastDiagTick = 0;
+
+  function updateDiagnostics(timestamp) {
+    if (!isScanning) return;
+    if (timestamp - lastDiagTick < 35) return;
+    lastDiagTick = timestamp;
+
+    const base = Math.sin(timestamp * 0.008) * 14 + Math.cos(timestamp * 0.015) * 8;
+    const noise = (Math.random() - 0.5) * 6;
+    const motionSpike = (currentScenario === 'doorway' || currentScenario === 'chair') ? (Math.random() > 0.85 ? 22 : 0) : 0;
+    diagData.shift();
+    diagData.push(base + noise + motionSpike);
+
+    // Update dual metrics text with slight micro-variations
+    if (diagResidualVal) {
+      const res = (2.45 + Math.sin(timestamp * 0.002) * 0.04).toFixed(2);
+      diagResidualVal.textContent = `${res}%`;
+    }
+    if (diagLatencyVal) {
+      const lat = (1.15 + Math.cos(timestamp * 0.003) * 0.03).toFixed(2);
+      diagLatencyVal.textContent = `${lat} ms`;
+    }
+  }
+
+  function renderDiagnosticsChart(timestamp) {
+    if (!diagnosticsCtx || !diagnosticsCanvas) return;
+    updateDiagnostics(timestamp);
+
+    const w = diagnosticsCanvas.width;
+    const h = diagnosticsCanvas.height;
+    diagnosticsCtx.clearRect(0, 0, w, h);
+
+    const midY = h / 2;
+
+    // Baseline
+    diagnosticsCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    diagnosticsCtx.lineWidth = 1;
+    diagnosticsCtx.beginPath();
+    diagnosticsCtx.moveTo(0, midY);
+    diagnosticsCtx.lineTo(w, midY);
+    diagnosticsCtx.stroke();
+
+    // Waveform
+    diagnosticsCtx.beginPath();
+    const len = diagData.length;
+    for (let i = 0; i < len; i++) {
+      const x = (i / (len - 1)) * w;
+      const y = midY - diagData[i];
+      if (i === 0) diagnosticsCtx.moveTo(x, y);
+      else diagnosticsCtx.lineTo(x, y);
+    }
+    diagnosticsCtx.shadowColor = '#06b6d4';
+    diagnosticsCtx.shadowBlur = 6;
+    diagnosticsCtx.strokeStyle = '#06b6d4';
+    diagnosticsCtx.lineWidth = 1.8;
+    diagnosticsCtx.stroke();
+    diagnosticsCtx.shadowBlur = 0;
+
+    // Highlights for peaks
+    for (let i = 2; i < len - 2; i += 8) {
+      if (Math.abs(diagData[i]) > 14) {
+        const x = (i / (len - 1)) * w;
+        const y = midY - diagData[i];
+        diagnosticsCtx.fillStyle = diagData[i] > 18 ? '#f97316' : '#22d3ee';
+        diagnosticsCtx.beginPath();
+        diagnosticsCtx.arc(x, y, 2.5, 0, Math.PI * 2);
+        diagnosticsCtx.fill();
+      }
+    }
+  }
+
+  // 3. Multi-Axis Radar / Spider Chart (Card 5)
+  const radarAxes = [
+    { label: 'Resolution (2.5D)', val: 0.92, text: 'Res 92%' },
+    { label: 'Kernel Latency', val: 0.96, text: 'Lat 0.39ms' },
+    { label: 'Dynamic Sep', val: 0.88, text: 'Dyn Sep 88%' },
+    { label: 'Memory Eff', val: 0.95, text: 'Mem 3.1KB' },
+    { label: 'Accuracy', val: 0.90, text: 'Acc 98%' }
+  ];
+
+  function renderRadarSpiderChart(timestamp) {
+    if (!radarCtx || !radarCanvas) return;
+    const w = radarCanvas.width;
+    const h = radarCanvas.height;
+    radarCtx.clearRect(0, 0, w, h);
+
+    const cx = w / 2;
+    const cy = h / 2 + 6;
+    const maxRadius = 66;
+    const sides = 5;
+    const angleStep = (Math.PI * 2) / sides;
+    const startAngle = -Math.PI / 2;
+
+    // Draw concentric web pentagons (25%, 50%, 75%, 100%)
+    const rings = [0.25, 0.5, 0.75, 1.0];
+    rings.forEach((level) => {
+      radarCtx.beginPath();
+      for (let s = 0; s < sides; s++) {
+        const ang = startAngle + s * angleStep;
+        const r = maxRadius * level;
+        const px = cx + Math.cos(ang) * r;
+        const py = cy + Math.sin(ang) * r;
+        if (s === 0) radarCtx.moveTo(px, py);
+        else radarCtx.lineTo(px, py);
+      }
+      radarCtx.closePath();
+      radarCtx.strokeStyle = level === 1.0 ? 'rgba(6, 182, 212, 0.28)' : 'rgba(255, 255, 255, 0.08)';
+      radarCtx.lineWidth = 1;
+      radarCtx.stroke();
+    });
+
+    // Draw radial spokes & labels
+    for (let s = 0; s < sides; s++) {
+      const ang = startAngle + s * angleStep;
+      const px = cx + Math.cos(ang) * maxRadius;
+      const py = cy + Math.sin(ang) * maxRadius;
+      radarCtx.beginPath();
+      radarCtx.moveTo(cx, cy);
+      radarCtx.lineTo(px, py);
+      radarCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      radarCtx.lineWidth = 1;
+      radarCtx.stroke();
+
+      const labelDist = maxRadius + 18;
+      const lx = cx + Math.cos(ang) * labelDist;
+      const ly = cy + Math.sin(ang) * labelDist + 3;
+      radarCtx.fillStyle = '#94a3b8';
+      radarCtx.font = '9px "JetBrains Mono", monospace';
+      radarCtx.textAlign = 'center';
+      radarCtx.fillText(radarAxes[s].text, lx, ly);
+    }
+
+    // Draw Data Polygon with slight breathing animation
+    const breath = isScanning ? Math.sin(timestamp * 0.0025) * 0.015 : 0;
+    radarCtx.beginPath();
+    const polyPoints = [];
+    for (let s = 0; s < sides; s++) {
+      const ang = startAngle + s * angleStep;
+      const val = Math.min(1.0, radarAxes[s].val + breath + Math.sin(timestamp * 0.003 + s) * 0.01);
+      const r = maxRadius * val;
+      const px = cx + Math.cos(ang) * r;
+      const py = cy + Math.sin(ang) * r;
+      polyPoints.push({ x: px, y: py });
+      if (s === 0) radarCtx.moveTo(px, py);
+      else radarCtx.lineTo(px, py);
+    }
+    radarCtx.closePath();
+
+    const polyGrad = radarCtx.createRadialGradient(cx, cy, 5, cx, cy, maxRadius);
+    polyGrad.addColorStop(0, 'rgba(6, 182, 212, 0.38)');
+    polyGrad.addColorStop(1, 'rgba(6, 182, 212, 0.08)');
+    radarCtx.fillStyle = polyGrad;
+    radarCtx.fill();
+
+    radarCtx.shadowColor = '#22d3ee';
+    radarCtx.shadowBlur = 10;
+    radarCtx.strokeStyle = '#22d3ee';
+    radarCtx.lineWidth = 2;
+    radarCtx.stroke();
+    radarCtx.shadowBlur = 0;
+
+    polyPoints.forEach(pt => {
+      radarCtx.fillStyle = '#ffffff';
+      radarCtx.beginPath();
+      radarCtx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+      radarCtx.fill();
+
+      radarCtx.strokeStyle = '#06b6d4';
+      radarCtx.lineWidth = 1.5;
+      radarCtx.stroke();
+    });
+  }
+
+  // 4. Smart Live Stream Sparkline & Resource Gauges (Card 6)
+  const smartPoints = 50;
+  const smartLiveData = [];
+  for (let i = 0; i < smartPoints; i++) {
+    smartLiveData.push(Math.sin(i * 0.5) * 12 + Math.cos(i * 1.2) * 8);
+  }
+  let lastSmartTick = 0;
+
+  function updateSmartLive(timestamp) {
+    if (!isScanning) return;
+    if (timestamp - lastSmartTick < 40) return;
+    lastSmartTick = timestamp;
+
+    const base = Math.sin(timestamp * 0.006) * 14 + Math.cos(timestamp * 0.012) * 10;
+    const noise = (Math.random() - 0.5) * 5;
+    smartLiveData.shift();
+    smartLiveData.push(base + noise);
+
+    // Micro-update progress rings
+    if (ringCpuText) {
+      const cpu = Math.round(29 + Math.sin(timestamp * 0.001) * 3);
+      ringCpuText.textContent = `${cpu}%`;
+      if (ringCpuFg) ringCpuFg.style.strokeDashoffset = (138.2 * (1 - cpu / 100)).toFixed(1);
+    }
+    if (ringMemText) {
+      const mem = Math.round(65 + Math.cos(timestamp * 0.0015) * 2);
+      ringMemText.textContent = `${mem}%`;
+      if (ringMemFg) ringMemFg.style.strokeDashoffset = (138.2 * (1 - mem / 100)).toFixed(1);
+    }
+    if (ringDriftText) {
+      const drift = Math.round(5 + Math.sin(timestamp * 0.002) * 1);
+      ringDriftText.textContent = `${drift}%`;
+      if (ringDriftFg) ringDriftFg.style.strokeDashoffset = (138.2 * (1 - drift / 100)).toFixed(1);
+    }
+  }
+
+  function renderSmartLiveStream(timestamp) {
+    if (!smartLiveCtx || !smartLiveCanvas) return;
+    updateSmartLive(timestamp);
+
+    const w = smartLiveCanvas.width;
+    const h = smartLiveCanvas.height;
+    smartLiveCtx.clearRect(0, 0, w, h);
+
+    const midY = h / 2;
+
+    // Background dashed line
+    smartLiveCtx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    smartLiveCtx.lineWidth = 1;
+    smartLiveCtx.beginPath();
+    smartLiveCtx.moveTo(0, midY);
+    smartLiveCtx.lineTo(w, midY);
+    smartLiveCtx.stroke();
+
+    // Stream line
+    smartLiveCtx.beginPath();
+    const len = smartLiveData.length;
+    for (let i = 0; i < len; i++) {
+      const x = (i / (len - 1)) * w;
+      const y = midY - smartLiveData[i];
+      if (i === 0) smartLiveCtx.moveTo(x, y);
+      else smartLiveCtx.lineTo(x, y);
+    }
+
+    smartLiveCtx.shadowColor = '#10b981';
+    smartLiveCtx.shadowBlur = 8;
+    smartLiveCtx.strokeStyle = '#10b981';
+    smartLiveCtx.lineWidth = 1.8;
+    smartLiveCtx.stroke();
+    smartLiveCtx.shadowBlur = 0;
+
+    // Leading apex pulse
+    const lx = w - 2;
+    const ly = midY - smartLiveData[len - 1];
+    smartLiveCtx.fillStyle = '#ffffff';
+    smartLiveCtx.beginPath();
+    smartLiveCtx.arc(lx, ly, 3, 0, Math.PI * 2);
+    smartLiveCtx.fill();
+  }
+
+  // Combined render call for all 4 Station canvases
+  function renderStationCanvases(timestamp) {
+    renderLidarStreamChart(timestamp);
+    renderDiagnosticsChart(timestamp);
+    renderRadarSpiderChart(timestamp);
+    renderSmartLiveStream(timestamp);
+  }
 
   // ─── Modal Handling ────────────────────────────────────────────────────────
   const btnOpenGuide = document.getElementById('btn-open-guide');
